@@ -74,8 +74,18 @@ namespace U4.Unpacker
             }
             else
             {
+                Int64 dwArchiveSize = TPsarStream.Length;
+                Int64 dwCheckSize = dwArchiveSize - m_Entry.dwOffset;
+                Int64 dwEntrySize = m_Entry.dwDecompressedSize;
+
+                //The data size for the last file is larger in flash1.psarc
+                if (dwCheckSize < dwEntrySize)
+                {
+                    dwEntrySize = dwCheckSize;
+                }
+
                 TPsarStream.Seek(m_Entry.dwOffset, SeekOrigin.Begin);
-                var lpBuffer = TPsarStream.ReadBytes((Int32)m_Entry.dwDecompressedSize);
+                var lpBuffer = TPsarStream.ReadBytes((Int32)dwEntrySize);
                 
                 return lpBuffer;
             }
