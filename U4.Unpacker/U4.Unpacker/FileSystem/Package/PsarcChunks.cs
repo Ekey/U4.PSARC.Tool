@@ -7,6 +7,22 @@ namespace U4.Unpacker
     {
         //http://aluigi.org/bms/brink.bms
 
+        public static Byte[] iDecompressCore(Byte[] lpBuffer, UInt16 wMagic, Int32 dwCompressedSize, Int32 dwDecompressedSize)
+        {
+            if (wMagic == 0x68C)
+            {
+                var lpDstBuffer = Oodle.iDecompress(lpBuffer, dwCompressedSize, (Int32)dwDecompressedSize);
+                return lpDstBuffer;
+            }
+            else if (wMagic == 0xDA78)
+            {
+                var lpDstBuffer = Zlib.iDecompress(lpBuffer);
+                return lpDstBuffer;
+            }
+
+            return lpBuffer;
+        }
+
         public static Byte[] iReadData(FileStream TPsarStream, PsarcHeader m_Header, PsarcEntry m_Entry, Int32[] m_LengthsTable)
         {
             Int32 dwOffset = 0;
@@ -21,7 +37,7 @@ namespace U4.Unpacker
             TPsarStream.Seek(m_Entry.dwOffset, SeekOrigin.Begin);
             UInt16 wMagic = TPsarStream.ReadUInt16();
 
-            if (wMagic == 0x68C)
+            if (wMagic == 0x68C || wMagic == 0xDA78)
             {
                 do
                 {
@@ -36,7 +52,7 @@ namespace U4.Unpacker
                     if (dwRemainedSize < dwChunkSize || dwCompressedChunkSize == dwChunkSize)
                     {
                         var lpSrcBuffer = TPsarStream.ReadBytes(dwCompressedChunkSize);
-                        var lpDstBuffer = Oodle.iDecompress(lpSrcBuffer, dwCompressedChunkSize, (Int32)dwRemainedSize);
+                        var lpDstBuffer = iDecompressCore(lpSrcBuffer, wMagic, dwCompressedChunkSize, (Int32)dwRemainedSize);
 
                         Array.Copy(lpDstBuffer, 0, lpResult, dwOffset, lpDstBuffer.Length);
                         dwOffset += lpDstBuffer.Length;
@@ -44,7 +60,7 @@ namespace U4.Unpacker
                     else
                     {
                         var lpSrcBuffer = TPsarStream.ReadBytes(dwCompressedChunkSize);
-                        var lpDstBuffer = Oodle.iDecompress(lpSrcBuffer, dwCompressedChunkSize, (Int32)dwChunkSize);
+                        var lpDstBuffer = iDecompressCore(lpSrcBuffer, wMagic, dwCompressedChunkSize, (Int32)dwChunkSize);
 
                         Array.Copy(lpDstBuffer, 0, lpResult, dwOffset, lpDstBuffer.Length);
                         dwOffset += lpDstBuffer.Length;
