@@ -64,6 +64,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="FileSystem\Compression\Oodle.cs" />
+    <Compile Include="FileSystem\Compression\Zlib.cs" />
     <Compile Include="FileSystem\Other\Helpers.cs" />
     <Compile Include="FileSystem\Other\Utils.cs" />
     <Compile Include="FileSystem\Package\PsarcChunks.cs" />
@@ -71,6 +72,7 @@
     <Compile Include="FileSystem\Package\PsarcHash.cs" />
     <Compile Include="FileSystem\Package\PsarcHashList.cs" />
     <Compile Include="FileSystem\Package\PsarcHeader.cs" />
+    <Compile Include="FileSystem\Package\PsarcCompTypes.cs" />
     <Compile Include="FileSystem\Package\PsarcUnpack.cs" />
     <Compile Include="FileSystem\Package\PsarcUtils.cs" />
     <Compile Include="Program.cs" />

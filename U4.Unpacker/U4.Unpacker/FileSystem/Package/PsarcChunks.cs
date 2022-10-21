@@ -5,49 +5,66 @@ namespace U4.Unpacker
 {
     class PsarcChunks
     {
-        public static Byte[] iDecompress(FileStream TPsarStream, PsarcEntry m_Entry, Int32[] m_LengthsTable)
+        //http://aluigi.org/bms/brink.bms
+
+        public static Byte[] iReadData(FileStream TPsarStream, PsarcHeader m_Header, PsarcEntry m_Entry, Int32[] m_LengthsTable)
         {
             Int32 dwOffset = 0;
             Int32 dwIndex = m_Entry.dwEntryIndex;
 
-            UInt32 dwLeftSize = (UInt32)m_Entry.dwDecompressedSize;
+            Int32 dwChunkSize = 65536;
+            Int64 dwBlockOffset = m_Entry.dwOffset;
+            Int32 dwRemainedSize = (Int32)m_Entry.dwDecompressedSize;
+
             Byte[] lpResult = new Byte[m_Entry.dwDecompressedSize];
 
             TPsarStream.Seek(m_Entry.dwOffset, SeekOrigin.Begin);
+            UInt16 wMagic = TPsarStream.ReadUInt16();
 
-            do
+            if (wMagic == 0x68C)
             {
-                UInt32 dwDecompressedChunkSize = 65536;
-                Int32 dwCompressedChunkSize = m_LengthsTable[dwIndex];
-
-                if (dwCompressedChunkSize == m_Entry.dwDecompressedSize)
+                do
                 {
-                    var lpBuffer = TPsarStream.ReadBytes(m_Entry.dwDecompressedSize);
+                    TPsarStream.Seek(dwBlockOffset, SeekOrigin.Begin);
 
-                    Array.Copy(lpBuffer, 0, lpResult, dwOffset, lpBuffer.Length);
-                    dwOffset += lpBuffer.Length;
-                }
-                else
-                {
-                    if (dwLeftSize < dwDecompressedChunkSize)
+                    Int32 dwCompressedChunkSize = m_LengthsTable[dwIndex];
+                    if (dwCompressedChunkSize == 0)
                     {
-                        dwDecompressedChunkSize = dwLeftSize;
+                        dwCompressedChunkSize = dwChunkSize;
+                    }
+
+                    if (dwRemainedSize < dwChunkSize || dwCompressedChunkSize == dwChunkSize)
+                    {
+                        var lpSrcBuffer = TPsarStream.ReadBytes(dwCompressedChunkSize);
+                        var lpDstBuffer = Oodle.iDecompress(lpSrcBuffer, dwCompressedChunkSize, (Int32)dwRemainedSize);
+
+                        Array.Copy(lpDstBuffer, 0, lpResult, dwOffset, lpDstBuffer.Length);
+                        dwOffset += lpDstBuffer.Length;
                     }
                     else
                     {
-                        dwLeftSize -= dwDecompressedChunkSize;
+                        var lpSrcBuffer = TPsarStream.ReadBytes(dwCompressedChunkSize);
+                        var lpDstBuffer = Oodle.iDecompress(lpSrcBuffer, dwCompressedChunkSize, (Int32)dwChunkSize);
+
+                        Array.Copy(lpDstBuffer, 0, lpResult, dwOffset, lpDstBuffer.Length);
+                        dwOffset += lpDstBuffer.Length;
                     }
 
-                    var lpSrcBuffer = TPsarStream.ReadBytes(dwCompressedChunkSize);
-                    var lpDstBuffer = Oodle.iDecompress(lpSrcBuffer, dwCompressedChunkSize, (Int32)dwDecompressedChunkSize);
-
-                    Array.Copy(lpDstBuffer, 0, lpResult, dwOffset, lpDstBuffer.Length);
-                    dwOffset += lpDstBuffer.Length;
+                    dwIndex++;
+                    dwBlockOffset += dwCompressedChunkSize;
+                    dwRemainedSize -= dwChunkSize;
                 }
-
-                dwIndex++;
+                while (dwOffset < m_Entry.dwDecompressedSize);
             }
-            while (dwOffset < m_Entry.dwDecompressedSize);
+            else
+            {
+                TPsarStream.Seek(m_Entry.dwOffset, SeekOrigin.Begin);
+                var lpBuffer = TPsarStream.ReadBytes((Int32)m_Entry.dwDecompressedSize);
+                
+                return lpBuffer;
+            }
+
+            dwIndex++;
 
             return lpResult;
         }

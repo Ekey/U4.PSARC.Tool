@@ -20,6 +20,8 @@ namespace U4.Unpacker
                     m_HashList.Add(dwHash, m_Line);
                 }
                 while (TNamesReader.Position != lpBuffer.Length);
+
+                TNamesReader.Dispose();
             }
         }
 

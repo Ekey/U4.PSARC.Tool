@@ -19,7 +19,8 @@ namespace U4.Unpacker
 
                 if (m_Header.dwMagic != 0x52415350)
                 {
-                    throw new Exception("[ERROR]: Invalid magic of PSAR archive file!");
+                    Utils.iSetError("[ERROR]: Invalid magic of PSAR archive file!");
+                    return;
                 }
 
                 m_Header.wMajorVersion = TPsarStream.ReadInt16(true);
@@ -27,21 +28,23 @@ namespace U4.Unpacker
 
                 if (m_Header.wMajorVersion != 1 || m_Header.wMinorVersion != 4)
                 {
-                    throw new Exception("[ERROR]: Invalid version of PSAR archive file!");
+                    Utils.iSetError("[ERROR]: Invalid version of PSAR archive file!");
+                    return;
                 }
 
                 m_Header.dwCompressionType = TPsarStream.ReadUInt32();
 
-                if (m_Header.dwCompressionType != 0x6C646F6F)
+                if ((PsarcCompTypes)m_Header.dwCompressionType != PsarcCompTypes.ZLIB && (PsarcCompTypes)m_Header.dwCompressionType != PsarcCompTypes.OODLE)
                 {
-                    throw new Exception("[ERROR]: Invalid compression type of PSAR archive file!");
+                    Utils.iSetError("[ERROR]: Invalid compression type of PSAR archive file!");
+                    return;
                 }
 
                 m_Header.dwHeaderSize = TPsarStream.ReadInt32(true);
                 m_Header.dwEntrySize = TPsarStream.ReadInt32(true);
                 m_Header.dwTotalFiles = TPsarStream.ReadInt32(true);
-                m_Header.dwChunkSize = TPsarStream.ReadInt32(true);
-                m_Header.dwUnknown = TPsarStream.ReadInt32(true);
+                m_Header.dwBlockSize = TPsarStream.ReadInt32(true);
+                m_Header.dwArchiveFlags = TPsarStream.ReadInt32(true);
 
                 m_EntryTable.Clear();
                 m_NamesLookUp.Clear();
@@ -51,10 +54,8 @@ namespace U4.Unpacker
 
                     m_Entry.m_NameHash = PsarcUtils.iGetStringFromBytes(TPsarStream.ReadBytes(16));
                     m_Entry.dwEntryIndex = TPsarStream.ReadInt32(true);
-                    m_Entry.bFlag1 = TPsarStream.ReadByte();
-                    m_Entry.dwDecompressedSize = TPsarStream.ReadInt32(true);
-                    m_Entry.bFlag2 = TPsarStream.ReadByte();
-                    m_Entry.dwOffset = TPsarStream.ReadUInt32(true);
+                    m_Entry.dwDecompressedSize = ((Int64)TPsarStream.ReadByte()) << 32 | TPsarStream.ReadUInt32(true);
+                    m_Entry.dwOffset = ((Int64)TPsarStream.ReadByte()) << 32 | TPsarStream.ReadUInt32(true);
 
                     m_EntryTable.Add(m_Entry);
                 }
@@ -75,7 +76,7 @@ namespace U4.Unpacker
                     Utils.iSetInfo("[UNPACKING]: " + m_FileName);
                     Utils.iCreateDirectory(m_FullPath);
 
-                    var lpBuffer = PsarcChunks.iDecompress(TPsarStream, m_Entry, m_LengthsTable);
+                    var lpBuffer = PsarcChunks.iReadData(TPsarStream, m_Header, m_Entry, m_LengthsTable);
                     File.WriteAllBytes(m_FullPath, lpBuffer);
 
                     if (m_FileName == "NamesLookUp.txt")

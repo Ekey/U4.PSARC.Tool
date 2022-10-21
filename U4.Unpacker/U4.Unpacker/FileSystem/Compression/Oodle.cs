@@ -14,7 +14,22 @@ namespace U4.Unpacker
             Byte[] lpDstBuffer = new Byte[dwDecompressedSize];
             Int64 dwResult = OodleLZ_Decompress(lpScrBuffer, dwCompressedSize, lpDstBuffer, dwDecompressedSize, 1, 0, 0, 0, 0, 0, 0, 0, 0, 3);
 
-            return lpDstBuffer;
+            if (dwResult == dwDecompressedSize)
+            {
+                return lpDstBuffer;
+            }
+            else if (dwResult == 0)
+            {
+                return lpScrBuffer;
+            }
+            else if (dwResult < dwDecompressedSize)
+            {
+                return lpDstBuffer.Take((Int32)dwResult).ToArray();
+            }
+            else
+            {
+                throw new Exception("[ERROR]: There was an error while decompressing data!");
+            }
         }
     }
 }
